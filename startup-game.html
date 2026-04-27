@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Startup Survival — Game Prototype</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --card: #1a1a28;
+    --border: #2a2a40;
+    --accent: #f5c518;
+    --accent2: #ff4d6d;
+    --accent3: #4dffb4;
+    --accent4: #4da6ff;
+    --text: #e8e8f0;
+    --muted: #7070a0;
+    --danger: #ff4d6d;
+    --warn: #ffaa00;
+    --good: #4dffb4;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Noise texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  #app { position: relative; z-index: 1; }
+
+  /* === SCREENS === */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* === START SCREEN === */
+  #start-screen {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    text-align: center;
+    position: relative;
+  }
+
+  .bg-grid {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(245,197,24,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(245,197,24,0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+  }
+
+  .logo-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.3em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.2s ease forwards;
+  }
+
+  h1 {
+    font-size: clamp(3rem, 8vw, 6rem);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    margin-bottom: 0.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.4s ease forwards;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .subtitle {
+    font-size: 1.1rem;
+    color: var(--muted);
+    margin-bottom: 3rem;
+    font-weight: 400;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.6s ease forwards;
+  }
+
+  .start-btn {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    font-family: 'Syne', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    padding: 1rem 3rem;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    transition: transform 0.15s, box-shadow 0.15s;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.8s ease forwards;
+  }
+
+  .start-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 40px rgba(245,197,24,0.4);
+  }
+
+  .meta-info {
+    margin-top: 3rem;
+    display: flex;
+    gap: 2rem;
+    opacity: 0;
+    animation: fadeUp 0.6s 1s ease forwards;
+  }
+
+  .meta-pill {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .meta-pill span { color: var(--accent3); }
+
+  /* === GAME SCREEN === */
+  #game-screen {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1.5rem;
+  }
+
+  /* Header bar */
+  .game-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .round-info {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .round-info strong { color: var(--accent); font-size: 1rem; }
+
+  /* Timer */
+  .timer-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .timer-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  #timer-display {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--accent);
+    min-width: 2.5rem;
+    text-align: right;
+    transition: color 0.3s;
+  }
+
+  #timer-display.urgent { color: var(--danger); animation: pulse 0.5s infinite; }
+
+  /* Metrics */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .metric-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 1rem;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+
+  .metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+
+  .metric-card.speed::before { background: var(--accent4); }
+  .metric-card.quality::before { background: var(--accent3); }
+  .metric-card.morale::before { background: var(--accent); }
+  .metric-card.burnout::before { background: var(--accent2); }
+
+  .metric-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .metric-value {
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+  }
+
+  .metric-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .metric-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .speed .metric-fill { background: var(--accent4); }
+  .quality .metric-fill { background: var(--accent3); }
+  .morale .metric-fill { background: var(--accent); }
+  .burnout .metric-fill { background: var(--accent2); }
+
+  .metric-delta {
+    position: absolute;
+    top: 0.5rem; right: 0.5rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .metric-delta.show { opacity: 1; }
+  .metric-delta.pos { color: var(--good); }
+  .metric-delta.neg { color: var(--danger); }
+
+  /* Scenario card */
+  .scenario-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+    position: relative;
+  }
+
+  .scenario-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.75rem;
+  }
+
+  .scenario-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    line-height: 1.3;
+  }
+
+  .scenario-desc {
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    font-weight: 400;
+  }
+
+  /* Options */
+  .options-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.75rem;
+  }
+
+  .options-grid {
+    display: grid;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .option-btn {
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 1rem 1.25rem;
+    text-align: left;
+    cursor: pointer;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 1rem;
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .option-btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: rgba(245,197,24,0.06);
+    transform: translateX(4px);
+  }
+
+  .option-btn:disabled { opacity: 0.5; cursor: default; }
+
+  .opt-letter {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--accent);
+    font-weight: 700;
+    background: rgba(245,197,24,0.12);
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .opt-text { line-height: 1.4; }
+  .opt-text .opt-consequence {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-weight: 400;
+    margin-top: 0.25rem;
+  }
+
+  .opt-tags {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex-shrink: 0;
+  }
+
+  .tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    padding: 2px 6px;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+
+  .tag.pos { background: rgba(77,255,180,0.15); color: var(--accent3); }
+  .tag.neg { background: rgba(255,77,109,0.15); color: var(--danger); }
+  .tag.neu { background: rgba(112,112,160,0.15); color: var(--muted); }
+
+  /* Feedback panel */
+  #feedback-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    display: none;
+    animation: slideIn 0.3s ease;
+  }
+
+  #feedback-panel.visible { display: block; }
+
+  .feedback-header {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+  }
+
+  .feedback-text {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--text);
+    font-weight: 400;
+  }
+
+  .team-reaction {
+    margin-top: 0.75rem;
+    font-size: 0.85rem;
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  .next-btn {
+    display: block;
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: 'Syne', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    padding: 0.9rem;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .next-btn:hover {
+    background: var(--accent);
+    color: #000;
+  }
+
+  /* Log */
+  .history-section {
+    margin-top: 2rem;
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+  }
+
+  .history-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+  }
+
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    max-height: 120px;
+    overflow-y: auto;
+  }
+
+  .history-item {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    padding: 0.35rem 0.5rem;
+    background: var(--card);
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .history-item .h-round { color: var(--accent); }
+
+  /* === END SCREEN === */
+  #end-screen {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    text-align: center;
+  }
+
+  .result-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    padding: 0.4rem 1.2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .result-badge.win { background: rgba(77,255,180,0.15); color: var(--accent3); border: 1px solid var(--accent3); }
+  .result-badge.lose { background: rgba(255,77,109,0.15); color: var(--danger); border: 1px solid var(--danger); }
+
+  .result-title {
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 0.5rem;
+    line-height: 1;
+  }
+
+  .result-subtitle {
+    color: var(--muted);
+    font-size: 1rem;
+    margin-bottom: 2.5rem;
+    font-weight: 400;
+  }
+
+  .final-metrics {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .final-metric {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 1rem 1.5rem;
+    min-width: 120px;
+  }
+
+  .final-metric-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+  }
+
+  .final-metric-value {
+    font-size: 1.8rem;
+    font-weight: 800;
+  }
+
+  .score-display {
+    margin-bottom: 2rem;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .score-label { font-size: 0.8rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.25rem; }
+  .score-value { font-size: 3.5rem; font-weight: 700; color: var(--accent); }
+
+  .learning-note {
+    max-width: 480px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 1rem 1.25rem;
+    text-align: left;
+    margin-bottom: 2rem;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  .learning-note strong { color: var(--text); }
+
+  .restart-btn {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 0.9rem 2.5rem;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  .restart-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 30px rgba(245,197,24,0.4);
+  }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+  }
+
+  .shake { animation: shake 0.4s ease; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  @media (max-width: 600px) {
+    .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+    .option-btn { grid-template-columns: auto 1fr; }
+    .opt-tags { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- START SCREEN -->
+  <div id="start-screen" class="screen active">
+    <div class="bg-grid"></div>
+    <div class="logo-tag">Developing an Entrepreneurial Mindset — Group 27</div>
+    <h1>STARTUP<br><span>SURVIVAL</span></h1>
+    <p class="subtitle">Lead your team through real startup challenges.<br>Every decision has consequences.</p>
+    <button class="start-btn" onclick="startGame()">▶ Start Game</button>
+    <div class="meta-info">
+      <div class="meta-pill">Rounds: <span>6</span></div>
+      <div class="meta-pill">Metrics: <span>4</span></div>
+      <div class="meta-pill">Timer: <span>20s / round</span></div>
+    </div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="game-screen" class="screen">
+    <div class="game-header">
+      <div class="round-info">
+        Round <strong id="round-num">1</strong> / 6
+      </div>
+      <div class="timer-wrap">
+        <span class="timer-label">TIME</span>
+        <div id="timer-display">20</div>
+      </div>
+    </div>
+
+    <!-- Metrics -->
+    <div class="metrics-grid">
+      <div class="metric-card speed">
+        <div class="metric-label">⚡ Speed</div>
+        <div class="metric-value" id="m-speed">70</div>
+        <div class="metric-bar"><div class="metric-fill" id="b-speed" style="width:70%"></div></div>
+        <div class="metric-delta" id="d-speed"></div>
+      </div>
+      <div class="metric-card quality">
+        <div class="metric-label">✦ Quality</div>
+        <div class="metric-value" id="m-quality">70</div>
+        <div class="metric-bar"><div class="metric-fill" id="b-quality" style="width:70%"></div></div>
+        <div class="metric-delta" id="d-quality"></div>
+      </div>
+      <div class="metric-card morale">
+        <div class="metric-label">◈ Morale</div>
+        <div class="metric-value" id="m-morale">70</div>
+        <div class="metric-bar"><div class="metric-fill" id="b-morale" style="width:70%"></div></div>
+        <div class="metric-delta" id="d-morale"></div>
+      </div>
+      <div class="metric-card burnout">
+        <div class="metric-label">⚠ Burnout</div>
+        <div class="metric-value" id="m-burnout">30</div>
+        <div class="metric-bar"><div class="metric-fill" id="b-burnout" style="width:30%"></div></div>
+        <div class="metric-delta" id="d-burnout"></div>
+      </div>
+    </div>
+
+    <!-- Scenario -->
+    <div class="scenario-card">
+      <div class="scenario-tag">⬡ Challenge</div>
+      <div class="scenario-title" id="scenario-title">—</div>
+      <div class="scenario-desc" id="scenario-desc">—</div>
+    </div>
+
+    <!-- Options -->
+    <div class="options-label">Choose your action</div>
+    <div class="options-grid" id="options-grid"></div>
+
+    <!-- Feedback -->
+    <div id="feedback-panel">
+      <div class="feedback-header">⬡ Outcome</div>
+      <div class="feedback-text" id="feedback-text"></div>
+      <div class="team-reaction" id="team-reaction"></div>
+    </div>
+    <button class="next-btn" id="next-btn" style="display:none" onclick="nextRound()">Next Challenge →</button>
+
+    <!-- History -->
+    <div class="history-section">
+      <div class="history-label">Decision Log</div>
+      <div class="history-list" id="history-list"></div>
+    </div>
+  </div>
+
+  <!-- END SCREEN -->
+  <div id="end-screen" class="screen">
+    <div class="result-badge" id="result-badge">—</div>
+    <h2 class="result-title" id="result-title">—</h2>
+    <p class="result-subtitle" id="result-subtitle">—</p>
+    <div class="score-display">
+      <div class="score-label">Final Score</div>
+      <div class="score-value" id="final-score">—</div>
+    </div>
+    <div class="final-metrics" id="final-metrics"></div>
+    <div class="learning-note" id="learning-note"></div>
+    <button class="restart-btn" onclick="restartGame()">↺ Play Again</button>
+  </div>
+</div>
+
+<script>
+// =====================
+// GAME DATA
+// =====================
+const scenarios = [
+  {
+    title: "Deadline at Risk",
+    desc: "Client delivery is tomorrow. The team is overloaded and the MVP is still untested. What do you do?",
+    options: [
+      {
+        letter: "A",
+        text: "Push harder — all-night emergency sprint",
+        consequence: "Fast, but at a high cost",
+        tags: [{ t: "Speed +15", c: "pos" }, { t: "Morale −20", c: "neg" }, { t: "Burnout +25", c: "neg" }],
+        effect: { speed: 15, quality: -5, morale: -20, burnout: 25 },
+        feedback: "The team delivered — but at a cost. Half the code is untested and two members are on the edge of collapse.",
+        reaction: "\"We did it... but I can't do this again.\" — Senior Dev"
+      },
+      {
+        letter: "B",
+        text: "Redistribute tasks — rebalance the workload",
+        consequence: "Slight delay, more stable team",
+        tags: [{ t: "Speed −5", c: "neg" }, { t: "Quality +10", c: "pos" }, { t: "Morale +5", c: "pos" }],
+        effect: { speed: -5, quality: 10, morale: 5, burnout: -5 },
+        feedback: "The redistribution was slower at first, but the product came out more solid. The client noticed the quality.",
+        reaction: "\"Finally someone who thinks before acting.\" — Designer"
+      },
+      {
+        letter: "C",
+        text: "Negotiate the deadline — ask the client for 48 more hours",
+        consequence: "Client risk, but team breathes",
+        tags: [{ t: "Speed −15", c: "neg" }, { t: "Quality +15", c: "pos" }, { t: "Morale +15", c: "pos" }],
+        effect: { speed: -15, quality: 15, morale: 15, burnout: -10 },
+        feedback: "The client was reluctant but agreed. The team delivered a much more polished product — and nobody burned out.",
+        reaction: "\"Wow, I didn't expect you to negotiate for us.\" — Whole team"
+      }
+    ]
+  },
+  {
+    title: "Internal Conflict",
+    desc: "Two senior team members have a serious technical disagreement about architecture. The argument is paralysing progress.",
+    options: [
+      {
+        letter: "A",
+        text: "Let them sort it out — self-management",
+        consequence: "Might resolve itself or spiral",
+        tags: [{ t: "Speed −10", c: "neg" }, { t: "Morale −10", c: "neg" }, { t: "Autonomy", c: "neu" }],
+        effect: { speed: -10, quality: 0, morale: -10, burnout: 10 },
+        feedback: "The conflict dragged on for another week. They eventually resolved it, but team spirit was left fragile.",
+        reaction: "\"I thought we had a leader...\" — Junior member"
+      },
+      {
+        letter: "B",
+        text: "Make an executive call — pick one approach",
+        consequence: "Immediate progress, someone holds a grudge",
+        tags: [{ t: "Speed +15", c: "pos" }, { t: "Morale −10", c: "neg" }, { t: "Clear decision", c: "neu" }],
+        effect: { speed: 15, quality: 5, morale: -10, burnout: 0 },
+        feedback: "Progress unblocked. The senior whose approach was rejected went quiet — for now.",
+        reaction: "\"Fine, we move on. But I'm noting this.\" — Frustrated senior"
+      },
+      {
+        letter: "C",
+        text: "Facilitate a design session — build consensus together",
+        consequence: "Slower, but buys real alignment",
+        tags: [{ t: "Speed −5", c: "neg" }, { t: "Quality +10", c: "pos" }, { t: "Morale +20", c: "pos" }],
+        effect: { speed: -5, quality: 10, morale: 20, burnout: -5 },
+        feedback: "The session surfaced a third option neither had considered. The final solution was better than both original proposals.",
+        reaction: "\"This is what we should have done from the start.\" — Both"
+      }
+    ]
+  },
+  {
+    title: "Critical Bug in Production",
+    desc: "A severe bug is affecting 30% of users. The team is mid-sprint on an important feature. How do you respond?",
+    options: [
+      {
+        letter: "A",
+        text: "Whole team stops — 100% focus on the bug",
+        consequence: "Fast fix, sprint is compromised",
+        tags: [{ t: "Quality +20", c: "pos" }, { t: "Speed −20", c: "neg" }, { t: "Burnout +10", c: "neg" }],
+        effect: { speed: -20, quality: 20, morale: -5, burnout: 10 },
+        feedback: "Bug fixed in 4 hours. But the sprint slipped 2 days and the team lost its rhythm.",
+        reaction: "\"We did the right thing, but now we have to catch up on everything.\" — PM"
+      },
+      {
+        letter: "B",
+        text: "Create a task force — 2 on the bug, rest continues",
+        consequence: "Balanced but requires trust",
+        tags: [{ t: "Speed +5", c: "pos" }, { t: "Quality +10", c: "pos" }, { t: "Shared load", c: "neu" }],
+        effect: { speed: 5, quality: 10, morale: 5, burnout: 5 },
+        feedback: "The task force isolated the problem in 6 hours. The rest of the team kept momentum. An elegant solution.",
+        reaction: "\"Good call — we knew what was at stake.\" — Task force"
+      },
+      {
+        letter: "C",
+        text: "Ship a temporary workaround — fast patches",
+        consequence: "Relieves pain now, creates tech debt",
+        tags: [{ t: "Speed +20", c: "pos" }, { t: "Quality −15", c: "neg" }, { t: "Tech debt", c: "neg" }],
+        effect: { speed: 20, quality: -15, morale: 5, burnout: -5 },
+        feedback: "The workaround held for now, but tech debt will come back to bite you. Everyone knows it.",
+        reaction: "\"We're just delaying the inevitable...\" — Senior Dev"
+      }
+    ]
+  },
+  {
+    title: "Top Talent Wants to Leave",
+    desc: "Your best engineer received an offer from another company with a 40% salary increase. You have 24 hours to respond.",
+    options: [
+      {
+        letter: "A",
+        text: "Make an immediate counter-offer",
+        consequence: "Retains them, but sets a risky precedent",
+        tags: [{ t: "Morale −10", c: "neg" }, { t: "Speed +10", c: "pos" }, { t: "Team risk", c: "neg" }],
+        effect: { speed: 10, quality: 5, morale: -10, burnout: 0 },
+        feedback: "They stayed — but the rest of the team heard about it. Three people requested meetings to discuss their own salaries.",
+        reaction: "\"If they got 40% more, what am I missing out on?\" — Other devs"
+      },
+      {
+        letter: "B",
+        text: "Have an honest conversation about growth and vision",
+        consequence: "Can work if the vision is compelling",
+        tags: [{ t: "Morale +15", c: "pos" }, { t: "Trust", c: "pos" }, { t: "Uncertain", c: "neu" }],
+        effect: { speed: 0, quality: 5, morale: 15, burnout: -10 },
+        feedback: "They stayed — not for money, but for the conversation. They felt seen. They became even more committed.",
+        reaction: "\"Nobody ever talked to me like that about the future here.\" — Engineer"
+      },
+      {
+        letter: "C",
+        text: "Let them go — plan the transition carefully",
+        consequence: "Short-term loss, long-term culture health",
+        tags: [{ t: "Speed −20", c: "neg" }, { t: "Morale +10", c: "pos" }, { t: "Strong culture", c: "pos" }],
+        effect: { speed: -20, quality: -5, morale: 10, burnout: -15 },
+        feedback: "It hurt. But your graceful response spread the word. You received 3 inbound applications the following week.",
+        reaction: "\"This company treats people with respect even when they leave.\" — Glassdoor review"
+      }
+    ]
+  },
+  {
+    title: "Pivot or Persevere",
+    desc: "Data from the last 3 months shows your core feature has less than 5% adoption. Your investor wants a decision this week.",
+    options: [
+      {
+        letter: "A",
+        text: "Full pivot — drop the feature and change direction",
+        consequence: "High risk, high potential reward",
+        tags: [{ t: "Quality +10", c: "pos" }, { t: "Morale −15", c: "neg" }, { t: "Burnout +20", c: "neg" }],
+        effect: { speed: -10, quality: 10, morale: -15, burnout: 20 },
+        feedback: "The pivot caused confusion. Half the team didn't understand the new direction. The investor was impressed by your boldness.",
+        reaction: "\"Where are we even going now?\" — Confused team"
+      },
+      {
+        letter: "B",
+        text: "Iterate — incremental improvements based on data",
+        consequence: "Safe but may not be enough",
+        tags: [{ t: "Speed +10", c: "pos" }, { t: "Quality +10", c: "pos" }, { t: "Low risk", c: "neu" }],
+        effect: { speed: 10, quality: 10, morale: 5, burnout: -5 },
+        feedback: "Adoption climbed to 12% after 3 weeks of focused iterations. Not explosive, but real and sustained growth.",
+        reaction: "\"It's slow, but at least we're learning while we build.\" — PM"
+      },
+      {
+        letter: "C",
+        text: "Talk to users — 10 interviews this week",
+        consequence: "Delays things but informs much better",
+        tags: [{ t: "Speed −15", c: "neg" }, { t: "Quality +20", c: "pos" }, { t: "Valuable insight", c: "pos" }],
+        effect: { speed: -15, quality: 20, morale: 10, burnout: -5 },
+        feedback: "The interviews revealed a completely different problem. You built the right thing for the wrong problem. Now you know the truth.",
+        reaction: "\"We should have done this 3 months ago...\" — Whole team"
+      }
+    ]
+  },
+  {
+    title: "Growth vs. Stability",
+    desc: "You have a chance to hire 5 people at once to scale fast. But the product isn't stable yet.",
+    options: [
+      {
+        letter: "A",
+        text: "Hire all 5 now — seize the momentum",
+        consequence: "Explosive growth, guaranteed chaos",
+        tags: [{ t: "Speed +10", c: "pos" }, { t: "Morale −20", c: "neg" }, { t: "Burnout +20", c: "neg" }],
+        effect: { speed: 10, quality: -15, morale: -20, burnout: 20 },
+        feedback: "Onboarding chaos. New hires don't know how things work. Veterans spend 60% of their time teaching instead of building.",
+        reaction: "\"We're growing and sinking at the same time.\" — CTO"
+      },
+      {
+        letter: "B",
+        text: "Hire 2 now — test the onboarding process first",
+        consequence: "Moderate growth, more controlled",
+        tags: [{ t: "Speed +5", c: "pos" }, { t: "Quality +5", c: "pos" }, { t: "Controlled risk", c: "neu" }],
+        effect: { speed: 5, quality: 5, morale: 5, burnout: -5 },
+        feedback: "The two new hires integrated smoothly. You learned a lot about your onboarding process. Ready to scale.",
+        reaction: "\"This pace is sustainable. When do we hire the next ones?\" — Team"
+      },
+      {
+        letter: "C",
+        text: "Wait — stabilise the product before growing",
+        consequence: "You might miss the market window",
+        tags: [{ t: "Speed −20", c: "neg" }, { t: "Quality +20", c: "pos" }, { t: "Morale +10", c: "pos" }],
+        effect: { speed: -20, quality: 20, morale: 10, burnout: -15 },
+        feedback: "The product became solid. The market window didn't close — in fact your main competitor launched too early and failed.",
+        reaction: "\"Sometimes the best move is to wait.\" — Advisor"
+      }
+    ]
+  }
+];
+
+// =====================
+// GAME STATE
+// =====================
+let state = {};
+let timerInterval = null;
+
+function initState() {
+  state = {
+    round: 0,
+    metrics: { speed: 70, quality: 70, morale: 70, burnout: 30 },
+    history: [],
+    chose: false,
+    timerLeft: 20
+  };
+}
+
+function startGame() {
+  initState();
+  showScreen('game-screen');
+  loadRound();
+  document.getElementById('game-screen').scrollIntoView();
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function loadRound() {
+  const scenario = scenarios[state.round];
+  state.chose = false;
+  state.timerLeft = 20;
+
+  document.getElementById('round-num').textContent = state.round + 1;
+  document.getElementById('scenario-title').textContent = scenario.title;
+  document.getElementById('scenario-desc').textContent = scenario.desc;
+  document.getElementById('feedback-panel').classList.remove('visible');
+  document.getElementById('next-btn').style.display = 'none';
+
+  renderMetrics(null);
+  renderOptions(scenario);
+  startTimer();
+}
+
+function renderMetrics(deltas) {
+  const m = state.metrics;
+  ['speed','quality','morale','burnout'].forEach(key => {
+    document.getElementById('m-'+key).textContent = Math.round(m[key]);
+    document.getElementById('b-'+key).style.width = Math.min(100, Math.max(0, m[key])) + '%';
+
+    const dEl = document.getElementById('d-'+key);
+    if (deltas && deltas[key] !== 0) {
+      const v = deltas[key];
+      dEl.textContent = (v > 0 ? '+' : '') + v;
+      dEl.className = 'metric-delta show ' + (v > 0 ? 'pos' : 'neg');
+      setTimeout(() => dEl.classList.remove('show'), 2000);
+    }
+  });
+}
+
+function renderOptions(scenario) {
+  const grid = document.getElementById('options-grid');
+  grid.innerHTML = '';
+  scenario.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = `
+      <div class="opt-letter">${opt.letter}</div>
+      <div class="opt-text">
+        <div>${opt.text}</div>
+        <div class="opt-consequence">${opt.consequence}</div>
+      </div>
+      <div class="opt-tags">
+        ${opt.tags.map(t => `<span class="tag ${t.c}">${t.t}</span>`).join('')}
+      </div>`;
+    btn.onclick = () => chooseOption(i);
+    grid.appendChild(btn);
+  });
+}
+
+function startTimer() {
+  clearInterval(timerInterval);
+  const display = document.getElementById('timer-display');
+  display.classList.remove('urgent');
+  display.textContent = state.timerLeft;
+
+  timerInterval = setInterval(() => {
+    state.timerLeft--;
+    display.textContent = state.timerLeft;
+    if (state.timerLeft <= 5) display.classList.add('urgent');
+    if (state.timerLeft <= 0) {
+      clearInterval(timerInterval);
+      if (!state.chose) autoChoose();
+    }
+  }, 1000);
+}
+
+function autoChoose() {
+  // Pick random if time runs out
+  const idx = Math.floor(Math.random() * scenarios[state.round].options.length);
+  chooseOption(idx, true);
+}
+
+function chooseOption(idx, auto = false) {
+  if (state.chose) return;
+  state.chose = true;
+  clearInterval(timerInterval);
+
+  const scenario = scenarios[state.round];
+  const opt = scenario.options[idx];
+
+  // Disable buttons
+  document.querySelectorAll('.option-btn').forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === idx) btn.style.borderColor = 'var(--accent)';
+  });
+
+  // Apply effects
+  const deltas = {};
+  Object.keys(opt.effect).forEach(key => {
+    const raw = opt.effect[key];
+    state.metrics[key] = Math.min(100, Math.max(0, state.metrics[key] + raw));
+    deltas[key] = raw;
+  });
+
+  renderMetrics(deltas);
+
+  // Show feedback
+  const fp = document.getElementById('feedback-panel');
+  document.getElementById('feedback-text').textContent = opt.feedback + (auto ? ' (Time ran out — random decision made!)' : '');
+  document.getElementById('team-reaction').textContent = opt.reaction;
+  fp.classList.add('visible');
+  fp.style.borderLeftColor = auto ? 'var(--danger)' : 'var(--accent)';
+
+  // Log
+  state.history.push({ round: state.round + 1, choice: opt.letter, text: opt.text });
+  renderHistory();
+
+  document.getElementById('next-btn').style.display = 'block';
+
+  // Check lose conditions immediately
+  if (state.metrics.burnout >= 90 || state.metrics.morale <= 10 || state.metrics.quality <= 10) {
+    setTimeout(() => endGame(false, 'early'), 1200);
+    return;
+  }
+}
+
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  list.innerHTML = state.history.slice().reverse().map(h =>
+    `<div class="history-item"><span class="h-round">R${h.round}</span><span>${h.choice}: ${h.text}</span></div>`
+  ).join('');
+}
+
+function nextRound() {
+  state.round++;
+  if (state.round >= scenarios.length) {
+    endGame(true);
+  } else {
+    loadRound();
+  }
+}
+
+function endGame(won, reason = '') {
+  clearInterval(timerInterval);
+  const m = state.metrics;
+
+  // Score: balance all 4 metrics (burnout inverted)
+  const score = Math.round((m.speed + m.quality + m.morale + (100 - m.burnout)) / 4);
+
+  let title, subtitle, badge, note;
+
+  if (!won && reason === 'early') {
+    title = 'The Team Collapsed';
+    subtitle = 'Your indicators hit a critical limit before the end.';
+    badge = 'lose';
+    note = '<strong>Key Learning:</strong> Balancing speed, quality, and team wellbeing matters more than any short-term win. Burnout and low morale destroy teams faster than any competitor.';
+  } else if (score >= 75) {
+    title = 'Exemplary Leadership';
+    subtitle = 'You survived and your team is still strong. Exceptionally rare.';
+    badge = 'win';
+    note = '<strong>Key Learning:</strong> You managed to balance multiple objectives under pressure. That is the core of entrepreneurial leadership: there are no right answers, only conscious trade-offs.';
+  } else if (score >= 55) {
+    title = 'Startup Survived';
+    subtitle = 'You made it through every challenge — scarred, but standing.';
+    badge = 'win';
+    note = '<strong>Key Learning:</strong> Some of your decisions were excellent, others cost you dearly. Recognising the patterns in your choices is the first step toward better leadership.';
+  } else {
+    title = 'On the Brink';
+    subtitle = 'You survived, barely. The team needs serious recovery time.';
+    badge = 'win';
+    note = '<strong>Key Learning:</strong> You were consistently reactive rather than proactive. Entrepreneurial leadership requires anticipating consequences — not just putting out fires.';
+  }
+
+  document.getElementById('result-badge').textContent = badge === 'win' ? '✦ MISSION COMPLETE' : '⚠ GAME OVER';
+  document.getElementById('result-badge').className = 'result-badge ' + badge;
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('result-subtitle').textContent = subtitle;
+  document.getElementById('final-score').textContent = score;
+  document.getElementById('learning-note').innerHTML = note;
+
+  const metricsEl = document.getElementById('final-metrics');
+  const colors = { speed: 'var(--accent4)', quality: 'var(--accent3)', morale: 'var(--accent)', burnout: 'var(--danger)' };
+  const labels = { speed: '⚡ Speed', quality: '✦ Quality', morale: '◈ Morale', burnout: '⚠ Burnout' };
+  metricsEl.innerHTML = Object.keys(m).map(key =>
+    `<div class="final-metric">
+      <div class="final-metric-label">${labels[key]}</div>
+      <div class="final-metric-value" style="color:${colors[key]}">${Math.round(m[key])}</div>
+    </div>`
+  ).join('');
+
+  setTimeout(() => showScreen('end-screen'), 800);
+}
+
+function restartGame() {
+  showScreen('start-screen');
+  document.getElementById('start-screen').scrollIntoView();
+}
+</script>
+</body>
+</html>
